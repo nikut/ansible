@@ -13,6 +13,7 @@ import argparse
 import ConfigParser
 from psphere.client import Client
 from psphere.managedobjects import HostSystem
+from psphere.managedobjects import VirtualMachine
 
 try:
     import json
@@ -30,7 +31,7 @@ def get_host_info(client, config, hostname):
 def get_inventory(client, config):
     ''' Reads the inventory from vsphere api '''
 
-    inv= { '_meta': { 'hostvars': {} } }
+    inv= { 'all': [], '_meta': { 'hostvars': {} } }
     default_group = os.path.basename(sys.argv[0]).rstrip('.py')
     if config.has_option('vsphere','hw_group'):
         hw_group = config.get('vsphere','hw_group')
@@ -47,7 +48,7 @@ def get_inventory(client, config):
     # Loop through physical hosts:
     hosts = HostSystem.all(client)
     for host in hosts:
-        inv['_meta']['hostvars'][host.name] = {}
+        inv['all'].append(host.name)
         inv[hw_group].append(host.name)
         if host.tag:
             taggroup = 'vsphere_' + host.tag
@@ -56,9 +57,13 @@ def get_inventory(client, config):
             else:
                 inv[taggroup] = [ host.name ]
 
+        inv['_meta']['hostvars'][host.name] = { 'vsphere_name': host.name,
+                                                'vsphere_hostname': 'N/A',
+                                                'vsphere_ip': 'good_question',
+                                              }
 
         for vm in host.vm:
-            inv['_meta']['hostvars'][vm.name] = {}
+            inv['all'].append(vm.name)
             inv[vm_group].append(vm.name)
             if vm.tag:
                 taggroup = 'vsphere_' + vm.tag
@@ -66,6 +71,13 @@ def get_inventory(client, config):
                     inv[taggroup].append(vm.name)
                 else:
                     inv[taggroup] = [ vm.name ]
+
+            inv['_meta']['hostvars'][vm.name] = { 'vsphere_name' : vm.name,
+                       #                           'vsphere_hostname': vm.guest.hostName,
+                       #                           'vsphere_ip'   : vm.guest.ipAddress,
+                       #                           'vsphere_cpus'   : vm.hardware.numCPU,
+                       #                           'vsphere_ram'   : vm.hardware.memoryMB,
+                                                }
     return json_format_dict(inv)
 
 def json_format_dict(data, pretty=False):
@@ -73,6 +85,7 @@ def json_format_dict(data, pretty=False):
     if pretty:
         return json.dumps(data, sort_keys=True, indent=2)
     else:
+
         return json.dumps(data)
 
 
