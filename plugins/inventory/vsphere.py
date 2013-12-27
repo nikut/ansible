@@ -5,6 +5,15 @@ VSPHERE external inventory script
 =================================
 
 shamelessly copied from existing inventory scripts.
+
+This script and it's ini can be used more than once,
+
+i.e vsphere_colo.py/vsphere_colo.ini vsphere_idf.py/vsphere_idf.ini
+(script can be link)
+
+so if you don't have clustered vcenter  but multiple esx machines or
+just diff clusters you can have a inventory  per each and automatically
+group hosts based on file name or specify a group in the ini.
 '''
 
 import os
