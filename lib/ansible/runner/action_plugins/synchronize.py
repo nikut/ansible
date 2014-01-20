@@ -103,7 +103,7 @@ class ActionModule(object):
             user = inject.get('ansible_ssh_user',
                               self.runner.remote_user)
             private_key = inject.get('ansible_ssh_private_key_file', self.runner.private_key_file)
-            private_key = template.template(self.runner.basedir, actual_private_key_file, inject, fail_on_undefined=True)
+            private_key = template.template(self.runner.basedir, private_key, inject, fail_on_undefined=True)
             if not private_key is None:
                 private_key = os.path.expanduser(private_key)
                 options['private_key'] = private_key
