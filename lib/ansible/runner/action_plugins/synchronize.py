@@ -21,6 +21,7 @@ import os.path
 from ansible import utils
 from ansible.runner.return_data import ReturnData
 import ansible.utils.template as template
+import pprint
 
 class ActionModule(object):
 
@@ -64,6 +65,8 @@ class ActionModule(object):
                 inject['ansible_connection'] = 'local'
                 self.transport_overridden = True
                 self.runner.sudo = False
+        pp = pprint.PrettyPrinter()
+        print "DEBUG: setup: inject =", pp.pformat(inject)
 
     def run(self, conn, tmp, module_name, module_args,
         inject, complex_args=None, **kwargs):
