@@ -29,12 +29,17 @@ class ActionModule(object):
 
     def _process_origin(self, host, path, user):
 
+        print "DEBUG: _process_origin: host =", host
+
         if not host in ['127.0.0.1', 'localhost']:
             return '%s@%s:%s' % (user, host, path)
         else:
             return path
 
     def _process_remote(self, host, path, user):
+
+        print "DEBUG: _process_remote: host =", host
+
         transport = self.runner.transport
         if not host in ['127.0.0.1', 'localhost'] or transport != "local":
             return '%s@%s:%s' % (user, host, path)
