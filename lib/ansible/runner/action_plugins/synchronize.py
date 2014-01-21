@@ -55,10 +55,12 @@ class ActionModule(object):
         self.transport_overridden = False
 
         if inject.get('delegate_to') is None:
+            print "DEBUG: setup: overriding delegate_to and ansible_connection"
             inject['delegate_to'] = '127.0.0.1'
             inject['ansible_connection'] = 'local'
             # IF original transport is not local, override transport and disable sudo.
             if self.original_transport != 'local':
+                print "DEBUG: setup: overriding ansible_connection and sudo"
                 inject['ansible_connection'] = 'local'
                 self.transport_overridden = True
                 self.runner.sudo = False
