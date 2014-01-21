@@ -104,6 +104,7 @@ class ActionModule(object):
 
         if options.get('mode', 'push') == 'pull':
             (dest_host, src_host) = (src_host, dest_host)
+        print "DEBUG: dest_host =", dest_host, "src_host =", src_host, "original_transport =", self.original_transport
         if not dest_host is src_host and self.original_transport != 'local':
             print "DEBUG: dest_host != src_host and transport != local"
             user = inject.get('ansible_ssh_user',
