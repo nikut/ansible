@@ -56,12 +56,12 @@ class ActionModule(object):
 
         if inject.get('delegate_to') is None:
             inject['delegate_to'] = '127.0.0.1'
+            inject['ansible_connection'] = 'local'
             # IF original transport is not local, override transport and disable sudo.
             if self.original_transport != 'local':
                 inject['ansible_connection'] = 'local'
                 self.transport_overridden = True
                 self.runner.sudo = False
-        print "DEBUG: setup: inject =", inject
 
     def run(self, conn, tmp, module_name, module_args,
         inject, complex_args=None, **kwargs):
