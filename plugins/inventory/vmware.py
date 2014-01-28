@@ -22,7 +22,6 @@ import argparse
 import ConfigParser
 from psphere.client import Client
 from psphere.managedobjects import HostSystem
-from psphere.managedobjects import VirtualMachine
 
 try:
     import json
@@ -35,38 +34,16 @@ def get_host_info(host):
     hostinfo = {
                 'vmware_name' : host.name,
                 'vmware_tag' : host.tag,
-                'vmware_datastores': host.datastore,
-                'vmware_uuid': host.properties.config.uuid,
-                'vmware_parent': host.parent,
+                'vmware_parent': host.parent.name,
                }
+    for k in host.capability.__dict__.keys():
+        if k.startswith('_'):
+           continue
+        try:
+            hostinfo['vmware_' + k] = str(host.capability[k])
+        except:
+           continue
 
-    if type(host, VirtualMachine):
-        hostinfo = hostinfo + {
-                    'vmware_guestid': host.guest.guestId,
-                    'vmware_hostname': host.guest.hostName,
-                    'vmware_guestfullname': host.guest.guestFullName,
-                    'vmware_ip'   : host.guest.ipAddress,
-                    'vmware_state': host.guest.guestState,
-                   }
-    else:
-        hostinfo = hostinfo + {
-                    'vmware_ipmi': host.ipmi,
-                   }
-
-    #ifidx = 0
-    #for entry in host.properties.config.hardware.device:
-    #    if hasattr(entry, 'macAddress'):
-    #        factname = 'hw_eth' + str(ifidx)
-    #        facts[factname] = {
-    #            'addresstype': entry.addressType,
-    #            'label': entry.deviceInfo.label,
-    #            'macaddress': entry.macAddress,
-    #            'macaddress_dash': entry.macAddress.replace(':', '-'),
-    #            'summary': entry.deviceInfo.summary,
-    #        }
-    #    ifidx += 1
-
-    # todo get host and api
     return hostinfo
 
 
