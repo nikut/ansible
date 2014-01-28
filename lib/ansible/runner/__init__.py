@@ -193,7 +193,8 @@ class Runner(object):
         self.callbacks.runner = self
         self.original_transport = self.transport
         self.su               = su
-        self.su_user          = su_user
+        self.su_user_var      = su_user
+        self.su_user          = None
         self.su_pass          = su_pass
 
         if self.transport == 'smart':
@@ -392,7 +393,7 @@ class Runner(object):
             sudoable = False
 
         if self.su:
-            res = self._low_level_exec_command(conn, cmd, tmp, su=sudoable, in_data=in_data)
+            res = self._low_level_exec_command(conn, cmd, tmp, su=True, in_data=in_data)
         else:
             res = self._low_level_exec_command(conn, cmd, tmp, sudoable=sudoable, in_data=in_data)
 
@@ -585,6 +586,8 @@ class Runner(object):
         # late processing of parameterized sudo_user (with_items,..)
         if self.sudo_user_var is not None:
             self.sudo_user = template.template(self.basedir, self.sudo_user_var, inject)
+        if self.su_user_var is not None:
+            self.su_user = template.template(self.basedir, self.su_user_var, inject)
 
         # allow module args to work as a dictionary
         # though it is usually a string
@@ -630,7 +633,7 @@ class Runner(object):
         # allow ansible_ssh_private_key_file to be templated
         actual_private_key_file = template.template(self.basedir, actual_private_key_file, inject, fail_on_undefined=True)
         self.sudo_pass = inject.get('ansible_sudo_pass', self.sudo_pass)
-        self.su = inject.get('ansible_su', self.su_pass)
+        self.su = inject.get('ansible_su', self.su)
         self.su_user = inject.get('ansible_su_user', self.su_user)
         self.su_pass = inject.get('ansible_su_pass', self.su_pass)
 
@@ -843,7 +846,7 @@ class Runner(object):
         sudo_user = self.sudo_user
         su_user = self.su_user
 
-        # compare connection user to sudo_user and disable if the same
+        # compare connection user to (su|sudo)_user and disable if the same
         if hasattr(conn, 'user'):
             if conn.user == sudo_user or conn.user == su_user:
                 sudoable = False
@@ -852,8 +855,8 @@ class Runner(object):
         if su:
             rc, stdin, stdout, stderr = conn.exec_command(cmd,
                                                           tmp,
-                                                          su_user=su_user,
                                                           su=su,
+                                                          su_user=su_user,
                                                           executable=executable,
                                                           in_data=in_data)
         else:

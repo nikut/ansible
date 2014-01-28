@@ -119,7 +119,7 @@ class Task(object):
         self.tags         = [ 'all' ]
         self.register     = ds.get('register', None)
         self.sudo         = utils.boolean(ds.get('sudo', play.sudo))
-        self.su           = utils.boolean(ds.get('sudo', play.su))
+        self.su           = utils.boolean(ds.get('su', play.su))
         self.environment  = ds.get('environment', {})
         self.role_name    = role_name
         
@@ -156,6 +156,13 @@ class Task(object):
         elif self.su:
             self.su_user      = ds.get('su_user', play.su_user)
             self.su_pass      = ds.get('su_pass', play.playbook.su_pass)
+
+        # Fail out if user specifies a sudo param with a su param in a given play
+        if (ds.get('sudo') or ds.get('sudo_user') or ds.get('sudo_pass')) and \
+                (ds.get('su') or ds.get('su_user') or ds.get('su_pass')):
+            raise errors.AnsibleError('sudo params ("sudo", "sudo_user", "sudo_pass") '
+                                      'and su params "su", "su_user", "su_pass") '
+                                      'cannot be used together')
 
         # Both are defined
         if ('action' in ds) and ('local_action' in ds):
