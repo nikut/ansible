@@ -115,7 +115,7 @@ If you don't have pip installed in your version of Python, install pip::
 
     $ sudo easy_install pip
 
-Ansible also uses the the following Python modules that need to be installed::
+Ansible also uses the following Python modules that need to be installed::
 
     $ sudo pip install paramiko PyYAML jinja2 httplib2
 
@@ -210,7 +210,7 @@ Readers that use virtualenv can also install Ansible under virtualenv, though we
 Tarballs of Tagged Releases
 +++++++++++++++++++++++++++
 
-Packaging Ansible or wanting to build a local package yourself, but don't want to do a git checkout?  Tarballs of releases are available on the `Ansible/downloads <http://ansibleworks.com/releases>`_ page.
+Packaging Ansible or wanting to build a local package yourself, but don't want to do a git checkout?  Tarballs of releases are available on the `Ansible downloads <http://releases.ansible.com/ansible>`_ page.
 
 These releases are also tagged in the `git repository <https://github.com/ansible/ansible/releases>`_ with the release version.
 
