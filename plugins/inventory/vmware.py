@@ -91,7 +91,7 @@ def get_inventory(client, config):
             inv[vm_group].append(vm.name)
             if vm.tag:
                 for tag in vm.tag:
-                    taggroup = 'vmware_' + tag
+                    taggroup = 'vmware_' + repr(tag)
                     if taggroup in inv:
                         inv[taggroup].append(vm.name)
                     else:
