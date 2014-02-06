@@ -90,11 +90,12 @@ def get_inventory(client, config):
             inv['all'].append(vm.name)
             inv[vm_group].append(vm.name)
             if vm.tag:
-                taggroup = 'vmware_' + vm.tag
-                if taggroup in inv:
-                    inv[taggroup].append(vm.name)
-                else:
-                    inv[taggroup] = [ vm.name ]
+                for tag in vm.tag:
+                    taggroup = 'vmware_' + tag
+                    if taggroup in inv:
+                        inv[taggroup].append(vm.name)
+                    else:
+                        inv[taggroup] = [ vm.name ]
 
             inv['_meta']['hostvars'][vm.name] = get_host_info(host)
     return json.dumps(inv)
