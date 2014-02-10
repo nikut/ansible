@@ -95,8 +95,17 @@ class PlayBook(object):
 
         self.SETUP_CACHE = SETUP_CACHE
 
-        if playbook is None or callbacks is None or runner_callbacks is None or stats is None:
-            raise Exception('missing required arguments')
+        arguments = []
+        if playbook is None:
+            arguments.append('playbook')
+        if callbacks is None:
+            arguments.append('callbacks')
+        if runner_callbacks is None:
+            arguments.append('runner_callbacks')
+        if stats is None:
+            arguments.append('stats')
+        if arguments:
+            raise Exception('PlayBook missing required arguments: %s' % ', '.join(arguments))
 
         if extra_vars is None:
             extra_vars = {}
@@ -346,6 +355,8 @@ class PlayBook(object):
             run_hosts=hosts,
             no_log=task.no_log,
         )
+
+        runner.module_vars.update({'play_hosts': hosts})
 
         if task.async_seconds == 0:
             results = runner.run()

@@ -13,6 +13,9 @@ Major features/changes:
 * git module has new parameters (accept_hostkey, key_file, ssh_opts) to ease the usage of git and ssh protocols. 
 * when using accelerate mode, the daemon will now be restarted when specifying a different remote_user between plays.
 * added no_log: option for tasks. When used, no logging information will be sent to syslog during the module execution.
+* acl module now handles 'default' and allows for either shorthand entry or specific fields per entry section
+* play_hosts is a new magic variable to provide a list of hosts in scope for the current play.
+* ec2 module now accepts 'exact_count' and 'count_tag' as a way to enforce a running number of nodes by tags.
 
 
 New modules:
@@ -25,6 +28,7 @@ New modules:
 * cloud: rax_files_objects
 * cloud: rax_keypair
 * cloud: rax_queue
+* messaging: rabbitmq_policy
 * system: at
 
 
