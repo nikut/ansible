@@ -87,19 +87,29 @@ def key_for_hostname(hostname):
     if not KEYCZAR_AVAILABLE:
         raise errors.AnsibleError("python-keyczar must be installed on the control machine to use accelerated modes")
 
-    key_path = os.path.expanduser("~/.fireball.keys")
+    key_path = os.path.expanduser(C.ACCELERATE_KEYS_DIR)
     if not os.path.exists(key_path):
-        os.makedirs(key_path)
-    key_path = os.path.expanduser("~/.fireball.keys/%s" % hostname)
+        os.makedirs(key_path, mode=0700)
+        os.chmod(key_path, int(C.ACCELERATE_KEYS_DIR_PERMS, 8))
+    elif not os.path.isdir(key_path):
+        raise errors.AnsibleError('ACCELERATE_KEYS_DIR is not a directory.')
+
+    if stat.S_IMODE(os.stat(key_path).st_mode) != int(C.ACCELERATE_KEYS_DIR_PERMS, 8):
+        raise errors.AnsibleError('Incorrect permissions on ACCELERATE_KEYS_DIR (%s)' % (C.ACCELERATE_KEYS_DIR,))
+
+    key_path = os.path.join(key_path, hostname)
 
     # use new AES keys every 2 hours, which means fireball must not allow running for longer either
     if not os.path.exists(key_path) or (time.time() - os.path.getmtime(key_path) > 60*60*2):
         key = AesKey.Generate()
-        fh = open(key_path, "w")
+        fd = os.open(key_path, os.O_WRONLY | os.O_CREAT, int(C.ACCELERATE_KEYS_FILE_PERMS, 8))
+        fh = os.fdopen(fd, 'w')
         fh.write(str(key))
         fh.close()
         return key
     else:
+        if stat.S_IMODE(os.stat(key_path).st_mode) != int(C.ACCELERATE_KEYS_FILE_PERMS, 8):
+            raise errors.AnsibleError('Incorrect permissions on ACCELERATE_KEYS_FILE (%s)' % (key_path,))
         fh = open(key_path)
         key = AesKey.Read(fh.read())
         fh.close()
@@ -612,6 +622,40 @@ def getch():
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     return ch
+
+def sanitize_output(str):
+    ''' strips private info out of a string '''
+
+    private_keys = ['password', 'login_password']
+
+    filter_re = [
+        # filter out things like user:pass@foo/whatever
+        # and http://username:pass@wherever/foo
+        re.compile('^(?P<before>.*:)(?P<password>.*)(?P<after>\@.*)$'),
+    ]
+
+    parts = str.split()
+    output = ''
+    for part in parts:
+        try:
+            (k,v) = part.split('=', 1)
+            if k in private_keys:
+                output += " %s=VALUE_HIDDEN" % k
+            else:
+                found = False
+                for filter in filter_re:
+                    m = filter.match(v)
+                    if m:
+                        d = m.groupdict()
+                        output += " %s=%s" % (k, d['before'] + "********" + d['after'])
+                        found = True
+                        break
+                if not found:
+                    output += " %s" % part
+        except:
+            output += " %s" % part
+
+    return output.strip()
 
 ####################################################################
 # option handling code for /usr/bin/ansible and ansible-playbook

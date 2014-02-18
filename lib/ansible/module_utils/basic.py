@@ -761,7 +761,13 @@ class AnsibleModule(object):
         # Sanitize possible password argument when logging.
         log_args = dict()
         passwd_keys = ['password', 'login_password']
-        
+
+        filter_re = [
+            # filter out things like user:pass@foo/whatever
+            # and http://username:pass@wherever/foo
+            re.compile('^(?P<before>.*:)(?P<password>.*)(?P<after>\@.*)$'), 
+        ]
+
         for param in self.params:
             canon  = self.aliases.get(param, param)
             arg_opts = self.argument_spec.get(canon, {})
@@ -772,12 +778,27 @@ class AnsibleModule(object):
             elif param in passwd_keys:
                 log_args[param] = 'NOT_LOGGING_PASSWORD'
             else:
-                log_args[param] = self.params[param]
+                found = False
+                for filter in filter_re:
+                    if isinstance(self.params[param], unicode):
+                        m = filter.match(self.params[param])
+                    else:
+                        m = filter.match(str(self.params[param]))
+                    if m:
+                        d = m.groupdict()
+                        log_args[param] = d['before'] + "********" + d['after']
+                        found = True
+                        break
+                if not found:
+                    log_args[param] = self.params[param]
 
         module = 'ansible-%s' % os.path.basename(__file__)
         msg = ''
         for arg in log_args:
-            msg = msg + arg + '=' + str(log_args[arg]) + ' '
+            if isinstance(log_args[arg], unicode):
+                msg = msg + arg + '=' + log_args[arg] + ' '
+            else:
+                msg = msg + arg + '=' + str(log_args[arg]) + ' '
         if msg:
             msg = 'Invoked with %s' % msg
         else:
@@ -793,10 +814,10 @@ class AnsibleModule(object):
             except IOError, e:
                 # fall back to syslog since logging to journal failed
                 syslog.openlog(str(module), 0, syslog.LOG_USER)
-                syslog.syslog(syslog.LOG_NOTICE, msg)
+                syslog.syslog(syslog.LOG_NOTICE, msg.decode('utf8').encode('utf8'))
         else:
             syslog.openlog(str(module), 0, syslog.LOG_USER)
-            syslog.syslog(syslog.LOG_NOTICE, msg)
+            syslog.syslog(syslog.LOG_NOTICE, msg.decode('utf8').encode('utf8'))
 
     def get_bin_path(self, arg, required=False, opt_dirs=[]):
         '''
@@ -840,7 +861,12 @@ class AnsibleModule(object):
             self.fail_json(msg='Boolean %s not in either boolean list' % arg)
 
     def jsonify(self, data):
-        return json.dumps(data)
+        for encoding in ("utf-8", "latin-1", "unicode_escape"):
+            try:
+                return json.dumps(data, encoding=encoding)
+            except UnicodeDecodeError, e:
+                continue
+        self.fail_json(msg='Invalid unicode encoding encountered')
 
     def from_json(self, data):
         return json.loads(data)

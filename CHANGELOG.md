@@ -16,7 +16,8 @@ Major features/changes:
 * acl module now handles 'default' and allows for either shorthand entry or specific fields per entry section
 * play_hosts is a new magic variable to provide a list of hosts in scope for the current play.
 * ec2 module now accepts 'exact_count' and 'count_tag' as a way to enforce a running number of nodes by tags.
-
+* all ec2 modules that work with Eucalyptus also now support a 'validate_certs' option, which can be set to 'off' for installations using self-signed certs.
+* Start of new integration test infrastructure (WIP, more details TBD)
 
 New modules:
 
@@ -28,9 +29,10 @@ New modules:
 * cloud: rax_files_objects
 * cloud: rax_keypair
 * cloud: rax_queue
+* cloud: docker_image
 * messaging: rabbitmq_policy
 * system: at
-
+* utilities: assert
 
 Misc:
 
@@ -55,6 +57,10 @@ Misc:
 * user module can move a home directory
 * significant enhancement and cleanup of rackspace modules
 * various other bug fixes
+
+## 1.4.5 "Could This Be Magic" - February 12, 2014
+
+- fixed issue with permissions being incorrect on fireball/accelerate keys when the umask setting was too loose.
 
 ## 1.4.4 "Could This Be Magic" - January 6, 2014
 
