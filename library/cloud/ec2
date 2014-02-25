@@ -962,10 +962,7 @@ def startstop_instances(module, ec2, instance_ids):
         module.fail_json(msg='instance_ids should be a list of instances, aborting')
 
     dest_state = module.params.get('state')
-    if dest_state == 'stopped':
-        dest_state_ec2 = 'stopped'
-    else:
-        dest_state_ec2 = 'running'
+    dest_state_ec2 = 'stopped' if dest_state == 'stopped' else 'running'
 
     # Check that our instances are not in the state we want to take them to
     # and change them to our desired state
