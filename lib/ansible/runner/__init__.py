@@ -628,7 +628,9 @@ class Runner(object):
             all_failed = False
             results = []
             for x in items:
-                inject['item'] = x
+                # use a fresh inject for each item                
+                this_inject = inject.copy()
+                this_inject['item'] = x
 
                 # TODO: this idiom should be replaced with an up-conversion to a Jinja2 template evaluation
                 if isinstance(self.complex_args, basestring):
@@ -640,7 +642,7 @@ class Runner(object):
                      host,
                      self.module_name,
                      self.module_args,
-                     inject,
+                     this_inject,
                      port,
                      complex_args=complex_args
                 )
@@ -718,7 +720,6 @@ class Runner(object):
         actual_pass = inject.get('ansible_ssh_pass', self.remote_pass)
         actual_transport = inject.get('ansible_connection', self.transport)
         actual_private_key_file = inject.get('ansible_ssh_private_key_file', self.private_key_file)
-        # allow ansible_ssh_private_key_file to be templated
         actual_private_key_file = template.template(self.basedir, actual_private_key_file, inject, fail_on_undefined=True)
         self.sudo_pass = inject.get('ansible_sudo_pass', self.sudo_pass)
         self.su = inject.get('ansible_su', self.su)
