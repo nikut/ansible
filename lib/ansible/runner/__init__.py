@@ -75,11 +75,6 @@ def _executor_hook(job_queue, result_queue, new_stdin):
             host = job_queue.get(block=False)
             return_data = multiprocessing_runner._executor(host, new_stdin)
             result_queue.put(return_data)
-
-            if 'LEGACY_TEMPLATE_WARNING' in return_data.flags:
-                # pass data back up across the multiprocessing fork boundary
-                template.Flags.LEGACY_TEMPLATE_WARNING = True
-
         except Queue.Empty:
             pass
         except:
@@ -193,7 +188,6 @@ class Runner(object):
         self.accelerate_port  = accelerate_port
         self.accelerate_ipv6  = accelerate_ipv6
         self.callbacks.runner = self
-        self.original_transport = self.transport
         self.su               = su
         self.su_user_var      = su_user
         self.su_user          = None
@@ -211,6 +205,9 @@ class Runner(object):
             else:
                 self.transport = "ssh" 
 
+        # save the original transport, in case it gets
+        # changed later via options like accelerate
+        self.original_transport = self.transport
 
         # misc housekeeping
         if subset and self.inventory._subset is None:
@@ -306,7 +303,7 @@ class Runner(object):
 
         delegate = {}
 
-        # allow ansible_ssh_host to be templated
+        # allow delegated host to be templated
         delegate['host'] = template.template(self.basedir, host, 
                                 remote_inject, fail_on_undefined=True)
 
@@ -331,7 +328,10 @@ class Runner(object):
             this_info = {}
 
         # get the real ssh_address for the delegate        
-        delegate['ssh_host'] = this_info.get('ansible_ssh_host', delegate['host'])
+        # and allow ansible_ssh_host to be templated
+        delegate['ssh_host'] = template.template(self.basedir,
+                            this_info.get('ansible_ssh_host', this_host),
+                            this_info, fail_on_undefined=True)
 
         delegate['port'] = this_info.get('ansible_ssh_port', port)
 
@@ -502,15 +502,6 @@ class Runner(object):
     def _executor(self, host, new_stdin):
         ''' handler for multiprocessing library '''
 
-        def get_flags():
-            # flags are a way of passing arbitrary event information
-            # back up the chain, since multiprocessing forks and doesn't
-            # allow state exchange
-            flags = []
-            if template.Flags.LEGACY_TEMPLATE_WARNING:
-                flags.append('LEGACY_TEMPLATE_WARNING')
-            return flags
-
         try:
             fileno = sys.stdin.fileno()
         except ValueError:
@@ -525,7 +516,6 @@ class Runner(object):
             exec_rc = self._executor_internal(host, new_stdin)
             if type(exec_rc) != ReturnData:
                 raise Exception("unexpected return type: %s" % type(exec_rc))
-            exec_rc.flags = get_flags()
             # redundant, right?
             if not exec_rc.comm_ok:
                 self.callbacks.on_unreachable(host, exec_rc.result)
@@ -533,11 +523,11 @@ class Runner(object):
         except errors.AnsibleError, ae:
             msg = str(ae)
             self.callbacks.on_unreachable(host, msg)
-            return ReturnData(host=host, comm_ok=False, result=dict(failed=True, msg=msg), flags=get_flags())
+            return ReturnData(host=host, comm_ok=False, result=dict(failed=True, msg=msg))
         except Exception:
             msg = traceback.format_exc()
             self.callbacks.on_unreachable(host, msg)
-            return ReturnData(host=host, comm_ok=False, result=dict(failed=True, msg=msg), flags=get_flags())
+            return ReturnData(host=host, comm_ok=False, result=dict(failed=True, msg=msg))
 
     # *****************************************************
 
@@ -546,7 +536,7 @@ class Runner(object):
 
         host_variables = self.inventory.get_variables(host, vault_password=self.vault_pass)
         host_connection = host_variables.get('ansible_connection', self.transport)
-        if host_connection in [ 'paramiko', 'paramiko_alt', 'ssh', 'ssh_old', 'accelerate' ]:
+        if host_connection in [ 'paramiko', 'ssh', 'accelerate' ]:
             port = host_variables.get('ansible_ssh_port', self.remote_port)
             if port is None:
                 port = C.DEFAULT_REMOTE_PORT
@@ -740,7 +730,7 @@ class Runner(object):
             if not self.accelerate_port:
                 self.accelerate_port = C.ACCELERATE_PORT
 
-        if actual_transport in [ 'paramiko', 'paramiko_alt', 'ssh', 'ssh_old', 'accelerate' ]:
+        if actual_transport in [ 'paramiko', 'ssh', 'accelerate' ]:
             actual_port = inject.get('ansible_ssh_port', port)
 
         # the delegated host may have different SSH port configured, etc
@@ -974,7 +964,12 @@ class Runner(object):
         data = self._low_level_exec_command(conn, cmd, tmp, sudoable=True)
         data2 = utils.last_non_blank_line(data['stdout'])
         try:
-            return data2.split()[0]
+            if data2 == '':
+                # this may happen if the connection to the remote server
+                # failed, so just return "INVALIDMD5SUM" to avoid errors
+                return "INVALIDMD5SUM"
+            else:
+                return data2.split()[0]
         except IndexError:
             sys.stderr.write("warning: md5sum command failed unusually, please report this to the list so it can be fixed\n")
             sys.stderr.write("command: %s\n" % md5s)
@@ -1005,7 +1000,7 @@ class Runner(object):
         if result['rc'] != 0:
             if result['rc'] == 5:
                 output = 'Authentication failure.'
-            elif result['rc'] == 255 and self.transport in ['ssh', 'ssh_old']:
+            elif result['rc'] == 255 and self.transport in ['ssh']:
                 if utils.VERBOSITY > 3:
                     output = 'SSH encountered an unknown error. The output was:\n%s' % (result['stdout']+result['stderr'])
                 else:
